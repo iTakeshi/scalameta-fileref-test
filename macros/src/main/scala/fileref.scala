@@ -2,20 +2,15 @@ package macros
 
 import java.util.Properties
 import java.io.FileInputStream
-import scala.annotation.StaticAnnotation
 import scala.collection.JavaConversions._
 import scala.collection.mutable
-import scala.meta._
+import scala.language.experimental.macros
+import scala.macros._
 import scala.util.control.Exception
 
-class fileref extends StaticAnnotation {
+object Helpers {
 
-  inline def apply(defn: Any): Any = meta { MacroImpl(defn) }
-}
-
-object MacroImpl {
-
-  private[this] def getString(key: String): Option[String] = propsOpt.map(_.get(key)).map { value =>
+  def getString(key: String): Option[String] = propsOpt.map(_.get(key)).map { value =>
     val str = value.toString
     if (str.startsWith("\"") && str.endsWith("\"") && str.length >= 2) {
       str.substring(1, str.length - 1)
@@ -30,9 +25,12 @@ object MacroImpl {
     using(new FileInputStream(fileName))(props.load(_))
     props
   }
+}
 
-  def apply(defn: Stat): Stat = {
-    val value = getString("key").get
+class fileref extends MacroAnnotation {
+
+  def apply(defn: Any): Any = macro {
+    val value = Helpers.getString("key").get
     defn match {
       case q"..$mods object $ename extends $template" =>
         val newTemplate = template match {
